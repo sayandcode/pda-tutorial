@@ -31,5 +31,11 @@ describe("PDA Tutorial", () => {
 
   it("Delete Message Account", async () => {
     // Implement delete test here
+    await program.methods.delete().rpc({ commitment: "confirmed" });
+    const accountData = await program.account.messageAccount.fetchNullable(
+      messagePda,
+      "confirmed"
+    );
+    expect(accountData).to.equal(null);
   });
 });

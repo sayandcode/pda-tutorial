@@ -1,16 +1,35 @@
-import * as anchor from "@coral-xyz/anchor";
-import { Program } from "@coral-xyz/anchor";
-import { PdaTutorial } from "../target/types/pda_tutorial";
+import { assert, expect } from "chai";
+import { wallet, program } from "./_utils";
+import { PublicKey } from "@solana/web3.js";
 
-describe("pda-tutorial", () => {
-  // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.AnchorProvider.env());
+describe("PDA Tutorial", () => {
+  const [messagePda, messageBump] = PublicKey.findProgramAddressSync(
+    [Buffer.from("message"), wallet.publicKey.toBuffer()],
+    program.programId
+  );
 
-  const program = anchor.workspace.PdaTutorial as Program<PdaTutorial>;
+  it("Create Message Account", async () => {
+    const msg = "Hello, World!";
+    await program.methods.create(msg).rpc({ commitment: "confirmed" });
 
-  it("Is initialized!", async () => {
-    // Add your test here.
-    const tx = await program.methods.initialize().rpc();
-    console.log("Your transaction signature", tx);
+    const accountData = await program.account.messageAccount.fetch(
+      messagePda,
+      "confirmed"
+    );
+    expect(accountData.message).to.equal(msg);
+  });
+
+  it("Update Message Account", async () => {
+    const updatedMsg = "Hello, Solana!";
+    await program.methods.update(updatedMsg).rpc({ commitment: "confirmed" });
+    const accountData = await program.account.messageAccount.fetch(
+      messagePda,
+      "confirmed"
+    );
+    expect(accountData.message).to.equal(updatedMsg);
+  });
+
+  it("Delete Message Account", async () => {
+    // Implement delete test here
   });
 });

@@ -14,5 +14,12 @@ url = "https://api.apr.dev"
 cluster = "Localnet"
 wallet = "~/.config/solana/id.json"
 
+[test]
+startup_wait = 30000
+
+[[test.genesis]]
+address = "BGsHZyRbdfesUCRXcyhFszGUxhcRCjkFz73fuPwxLkPf"
+program = "target/deploy/pda_tutorial.so"
+
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

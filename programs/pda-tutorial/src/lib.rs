@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_lang::system_program::{self, Transfer};
 
 declare_id!("BGsHZyRbdfesUCRXcyhFszGUxhcRCjkFz73fuPwxLkPf");
 
@@ -17,13 +18,37 @@ pub mod pda {
 
     pub fn update(ctx: Context<Update>, message: String) -> Result<()> {
         msg!("Update Message: {}", message);
+        let transfer_accounts = Transfer {
+            from: ctx.accounts.user.to_account_info(),
+            to: ctx.accounts.vault_account.to_account_info(), // TODO: try other signer
+        };
+        let cpi_context = CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            transfer_accounts,
+        );
+        system_program::transfer(cpi_context, 1_000_000)?;
+        ctx.accounts.message_account.message = "abc".to_string();
         let account_data = &mut ctx.accounts.message_account;
         account_data.message = message;
         Ok(())
     }
 
-    pub fn delete(_ctx: Context<Delete>) -> Result<()> {
+    pub fn delete(ctx: Context<Delete>) -> Result<()> {
         msg!("Delete Message");
+        let user_key = ctx.accounts.user.key();
+        let signer_seeds: &[&[&[u8]]] =
+            &[&[b"vault", user_key.as_ref(), &[ctx.bumps.vault_account]]];
+
+        let transfer_accounts = Transfer {
+            from: ctx.accounts.vault_account.to_account_info(),
+            to: ctx.accounts.user.to_account_info(),
+        };
+        let cpi_context = CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            transfer_accounts,
+        )
+        .with_signer(signer_seeds);
+        system_program::transfer(cpi_context, ctx.accounts.vault_account.lamports())?;
         Ok(())
     }
 }
@@ -62,6 +87,13 @@ pub struct Update<'info> {
     )]
     pub message_account: Account<'info, MessageAccount>,
 
+    #[account(
+        mut,
+        seeds = [b"vault", user.key().as_ref()],
+        bump
+    )]
+    pub vault_account: SystemAccount<'info>,
+
     pub system_program: Program<'info, System>,
 }
 
@@ -77,6 +109,15 @@ pub struct Delete<'info> {
         close = user
     )]
     pub message_account: Account<'info, MessageAccount>,
+
+    #[account(
+        mut,
+        seeds = [b"vault", user.key().as_ref()], 
+        bump
+    )]
+    pub vault_account: SystemAccount<'info>,
+
+    pub system_program: Program<'info, System>, // TODO: try a different type
 }
 
 #[account]
